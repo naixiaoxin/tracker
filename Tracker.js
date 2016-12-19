@@ -93,6 +93,8 @@ trackerSchema.methods.end = function (status) {
     Promise.all(this.requestPromises).then(() => {
         this.track('done')
         this.save()
+    }).catch((err) => {
+        this.track('There has some requests error!')
     })
 }
 
