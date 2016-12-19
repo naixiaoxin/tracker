@@ -106,6 +106,17 @@ trackerSchema.methods.end = function (status) {
     })
 }
 
+trackerSchema.methods.init = function (appId, url, method, body) {
+    this.appId = appId
+    this.url = url
+    this.method = method
+    this.body = body
+    this.requestPromises = []
+    this.track('request start')
+    const urlObj = URL.parse(this.url, true)
+    Object.assign(this, urlObj)
+}
+
 trackerSchema.statics.start = (uri) => mongoose.connect(uri)
 
 trackerSchema.statics.express = function (options) {
@@ -126,22 +137,7 @@ trackerSchema.statics.express = function (options) {
 
 const Request = mongoose.model('Request', requestSchema)
 
-const Model = mongoose.model('Tracker', trackerSchema)
-
-class Tracker extends Model {
-    constructor(appId, url, method, body) {
-        super({
-            appId,
-            url,
-            method,
-            body
-        })
-        this.requestPromises = []
-        this.track('request start')
-        const urlObj = URL.parse(this.url, true)
-        Object.assign(this, urlObj)
-    }
-}
+const Tracker = mongoose.model('Tracker', trackerSchema)
 
 Tracker.Request = Request
 
