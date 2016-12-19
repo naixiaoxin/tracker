@@ -37,7 +37,7 @@ const trackerSchema = new Schema({
     status   : { type: Number, index: true },
     method   : String,
     body     : Object,
-    requests : [ requestSchema ]
+    requests : [ { type: Schema.Types.ObjectId, ref: 'Request', index: true } ]
 }, {
     timestamps: true
 })
@@ -56,7 +56,7 @@ trackerSchema.methods.request = function (url, method, body, promise) {
     method = method || 'GET'
     this.track(`api request ${method} ${url}`)
     promise.then(({ text, response }) => {
-        this.requests.push({
+        const request = new Request({
             status   : response.status,
             url,
             method,
@@ -66,9 +66,11 @@ trackerSchema.methods.request = function (url, method, body, promise) {
             time     : Date.now() - st,
             body
         })
+        request.save()
+        this.requests.push(request._id)
         this.track(`api end success ${method} ${url}`)
     }, err => {
-        this.requests.push({
+        const request = new Request({
             status   : err.status,
             url,
             method,
@@ -78,6 +80,8 @@ trackerSchema.methods.request = function (url, method, body, promise) {
             time     : Date.now() - st,
             body     : err.body
         })
+        request.save()
+        this.requests.push(request)
         this.track(`api end error ${method} ${url}`)
     })
     this.requestPromises.push(promise)
@@ -95,6 +99,7 @@ trackerSchema.methods.end = function (status) {
         this.save()
     }).catch((err) => {
         this.track('There has some requests error!')
+        this.save()
     })
 }
 
@@ -116,6 +121,8 @@ trackerSchema.statics.express = function (options) {
     }
 }
 
+const Request = mongoose.model('Request', requestSchema)
+
 const Model = mongoose.model('Tracker', trackerSchema)
 
 class Tracker extends Model {
@@ -132,5 +139,7 @@ class Tracker extends Model {
         Object.assign(this, urlObj)
     }
 }
+
+Tracker.Request = Request
 
 module.exports = Tracker
