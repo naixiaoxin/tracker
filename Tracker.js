@@ -98,7 +98,7 @@ trackerSchema.methods.end = function (status) {
 
 trackerSchema.statics.start = (uri) => mongoose.connect(uri)
 
-trackerSchema.statics.express = function () {
+trackerSchema.statics.express = function (options) {
     this.start(options.uri)
     return (req, res, next) => {
         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`
