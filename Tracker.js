@@ -84,7 +84,7 @@ trackerSchema.methods.request = function (url, method, body, promise) {
             body     : err.body
         })
         request.save()
-        this.requests.push(request)
+        this.requests.push(request._id)
         this.track(`api end error ${method} ${url}`)
     })
     this.requestPromises.push(promise)
