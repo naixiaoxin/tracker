@@ -1,6 +1,8 @@
-import mongoose, { Schema } from 'mongoose'
-import onFinished from 'on-finished'
-import URL from 'url'
+const mongoose = require('mongoose')
+const onFinished = require('on-finished')
+const URL = require('url')
+
+const { Schema } = mongoose
 
 mongoose.Promise = global.Promise
 
@@ -94,6 +96,24 @@ trackerSchema.methods.end = function (status) {
     })
 }
 
+trackerSchema.statics.start = (uri) => mongoose.connect(uri)
+
+trackerSchema.statics.watching = function () {
+    this.start(options.uri)
+    return (req, res, next) => {
+        const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`
+        const appId = (res.locals.info && res.locals.info.appId) || null
+        req.tracker = new this(appId, fullUrl, req.method, req.body)
+        /* eslint-disable */
+        res.locals.tracker = req.tracker._id
+        /* eslint-ensable */
+        onFinished(res, (err, response) => {
+            req.tracker.end(response.statusCode)
+        })
+        next()
+    }
+}
+
 const Model = mongoose.model('Tracker', trackerSchema)
 
 class Tracker extends Model {
@@ -111,23 +131,4 @@ class Tracker extends Model {
     }
 }
 
-const start = (uri) => {
-    mongoose.connect(uri)
-}
-
-const watching = (options) => {
-    start(options.uri)
-    return (req, res, next) => {
-        const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`
-        const appId = (res.locals.info && res.locals.info.appId) || null
-        req.tracker = new Tracker(appId, fullUrl, req.method, req.body)
-        /* eslint-disable */
-        res.locals.tracker = req.tracker._id
-        /* eslint-ensable */
-        onFinished(res, (err, response) => {
-            req.tracker.end(response.statusCode)
-        })
-        next()
-    }
-}
-export default watching
+module.exports = Tracker
