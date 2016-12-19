@@ -72,7 +72,7 @@ trackerSchema.methods.request = function (url, method, body, promise) {
             status   : err.status,
             url,
             method,
-            content  : { ...err },
+            content  : err,
             startTime: st,
             endTime  : Date.now(),
             time     : Date.now() - st,
@@ -98,7 +98,7 @@ trackerSchema.methods.end = function (status) {
 
 trackerSchema.statics.start = (uri) => mongoose.connect(uri)
 
-trackerSchema.statics.watching = function () {
+trackerSchema.statics.express = function () {
     this.start(options.uri)
     return (req, res, next) => {
         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`
