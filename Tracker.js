@@ -106,7 +106,7 @@ trackerSchema.methods.end = function (status) {
     })
 }
 
-trackerSchema.methods.init = function (appId, url, method, body) {
+trackerSchema.methods.start = function (appId, url, method, body) {
     this.appId = appId
     this.url = url
     this.method = method
@@ -125,7 +125,7 @@ trackerSchema.statics.express = function (options) {
         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`
         const appId = (res.locals.info && res.locals.info.appId) || null
         req.tracker = new this()
-        req.tracker.init(appId, fullUrl, req.method, req.body)
+        req.tracker.start(appId, fullUrl, req.method, req.body)
         /* eslint-disable */
         res.locals.tracker = req.tracker._id
         /* eslint-ensable */
