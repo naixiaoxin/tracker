@@ -124,7 +124,8 @@ trackerSchema.statics.express = function (options) {
     return (req, res, next) => {
         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`
         const appId = (res.locals.info && res.locals.info.appId) || null
-        req.tracker = new this(appId, fullUrl, req.method, req.body)
+        req.tracker = new this()
+        req.tracker.init(appId, fullUrl, req.method, req.body)
         /* eslint-disable */
         res.locals.tracker = req.tracker._id
         /* eslint-ensable */
