@@ -19,6 +19,7 @@ const requestSchema = new Schema({
     time     : { type: Number, index: true },
     startTime: { type: Date, index: true },
     endTime  : { type: Date, index: true },
+    tracker  : { type: Schema.Types.ObjectId, ref: 'Tracker', index: true },
     body     : Object
 })
 
@@ -64,6 +65,7 @@ trackerSchema.methods.request = function (url, method, body, promise) {
             startTime: st,
             endTime  : Date.now(),
             time     : Date.now() - st,
+            tracker  : this._id,
             body
         })
         request.save()
@@ -78,6 +80,7 @@ trackerSchema.methods.request = function (url, method, body, promise) {
             startTime: st,
             endTime  : Date.now(),
             time     : Date.now() - st,
+            tracker  : this._id,
             body     : err.body
         })
         request.save()
