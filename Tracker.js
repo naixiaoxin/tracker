@@ -122,6 +122,7 @@ trackerSchema.statics.start = (uri) => mongoose.connect(uri)
 trackerSchema.statics.express = function (options) {
     this.start(options.uri)
     return (req, res, next) => {
+        if (mongoose.connection.readyState !== 1) return next()
         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`
         const appId = (res.locals.info && res.locals.info.appId) || null
         req.tracker = new this()
