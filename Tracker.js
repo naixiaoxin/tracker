@@ -125,15 +125,20 @@ trackerSchema.statics.express = function (options) {
         if (mongoose.connection.readyState !== 1) return next()
         const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`
         const appId = (res.locals.info && res.locals.info.appId) || null
-        req.tracker = new this()
-        req.tracker.start(appId, fullUrl, req.method, req.body)
-        /* eslint-disable */
-        res.locals.tracker = req.tracker._id
-        /* eslint-ensable */
-        onFinished(res, (err, response) => {
-            req.tracker.end(response.statusCode)
-        })
-        next()
+
+        if (options.appIds && options.appIds instanceof Array && options.appIds.indexOf(appId) !== -1) {
+            req.tracker = new this()
+            req.tracker.start(appId, fullUrl, req.method, req.body)
+            /* eslint-disable */
+            res.locals.tracker = req.tracker._id
+            /* eslint-ensable */
+            onFinished(res, (err, response) => {
+                req.tracker.end(response.statusCode)
+            })
+            next()
+        } else {
+            next()
+        }
     }
 }
 
