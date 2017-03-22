@@ -1,17 +1,17 @@
-const mongoose = require('mongoose')
-const onFinished = require('on-finished')
-const URL = require('url')
+var mongoose = require('mongoose');
+var onFinished = require('on-finished');
+var URL = require('url');
 
-const { Schema } = mongoose
+var Schema = mongoose.Schema;
 
-mongoose.Promise = global.Promise
+mongoose.Promise = global.Promise;
 
-const logSchema = new Schema({
+var logSchema = new Schema({
     log : String,
-    time: { type: Date, index: true },
-})
+    time: { type: Date, index: true }
+});
 
-const requestSchema = new Schema({
+var requestSchema = new Schema({
     status   : { type: Number, index: true },
     url      : { type: String, index: true },
     method   : String,
@@ -21,9 +21,12 @@ const requestSchema = new Schema({
     endTime  : { type: Date, index: true },
     tracker  : { type: Schema.Types.ObjectId, ref: 'Tracker', index: true },
     body     : Object
-})
+}, {
+    timestamps: true
+});
+requestSchema.path('createdAt').expires('7d');
 
-const trackerSchema = new Schema({
+var trackerSchema = new Schema({
     url      : { type: String, index: true },
     host     : { type: String, index: true },
     pathname : { type: String, index: true },
@@ -41,111 +44,118 @@ const trackerSchema = new Schema({
     requests : [ { type: Schema.Types.ObjectId, ref: 'Request', index: true } ]
 }, {
     timestamps: true
-})
+});
 
-trackerSchema.path('createdAt').expires('7d')
+trackerSchema.path('createdAt').expires('7d');
 
 trackerSchema.methods.track = function (log) {
     this.logs.push({
-        log,
+        log : log,
         time: Date.now()
-    })
-}
+    });
+};
 
 trackerSchema.methods.request = function (url, method, body, promise) {
-    const st = Date.now()
-    method = method || 'GET'
-    this.track(`api request ${method} ${url}`)
-    promise.then(({ text, response }) => {
-        const request = new Request({
+    var st = Date.now();
+    method = method || 'GET';
+    this.track('api request ' + method + ' ' + url);
+    var _this = this
+    promise.then(function (data) {
+        var text = data.text,
+            response = data.response;
+        var request = new Request({
             status   : response.status,
-            url,
-            method,
+            url      : url,
+            method   : method,
             content  : text,
             startTime: st,
             endTime  : Date.now(),
             time     : Date.now() - st,
-            tracker  : this._id,
-            body
-        })
-        request.save()
-        this.requests.push(request._id)
-        this.track(`api end success ${method} ${url}`)
-    }, err => {
-        const request = new Request({
+            tracker  : _this._id,
+            body     : body
+        });
+        request.save();
+        _this.requests.push(request._id);
+        _this.track('api end success ' + method + ' ' + url);
+    }, function (err) {
+        var request = new Request({
             status   : err.status,
-            url,
-            method,
+            url      : url,
+            method   : method,
             content  : err,
             startTime: st,
             endTime  : Date.now(),
             time     : Date.now() - st,
-            tracker  : this._id,
+            tracker  : _this._id,
             body     : err.body
-        })
-        request.save()
-        this.requests.push(request._id)
-        this.track(`api end error ${method} ${url}`)
+        });
+        request.save();
+        _this.requests.push(request._id);
+        _this.track(`api end error ${method} ${url}`);
     })
-    this.requestPromises.push(promise)
-    return promise
-}
+    this.requestPromises.push(promise);
+    return promise;
+};
 
 trackerSchema.methods.end = function (status) {
-    this.endTime = Date.now()
-    this.time = this.endTime - this.startTime
-    this.status = status
-    this.track('request end')
-    this.save()
-    Promise.all(this.requestPromises).then(() => {
-        this.track('done')
-        this.save()
-    }).catch((err) => {
-        this.track('There has some requests error!')
-        this.save()
-    })
-}
+    this.endTime = Date.now();
+    this.time = this.endTime - this.startTime;
+    this.status = status;
+    this.track('request end');
+    this.save();
+    var _this = this
+    Promise.all(_this.requestPromises).then(function () {
+        _this.track('done');
+        _this.save();
+    }).catch(function (err) {
+        _this.track('There has some requests error!');
+        _this.save();
+    });
+};
 
 trackerSchema.methods.start = function (appId, url, method, body) {
-    this.appId = appId
-    this.url = url
-    this.method = method
-    this.body = body
-    this.requestPromises = []
-    this.track('request start')
-    const urlObj = URL.parse(this.url, true)
-    Object.assign(this, urlObj)
-}
+    this.appId = appId;
+    this.url = url;
+    this.method = method;
+    this.body = body;
+    this.requestPromises = [];
+    this.track('request start');
+    var urlObj = URL.parse(this.url, true);
+    Object.assign(this, urlObj);
+};
 
-trackerSchema.statics.start = (uri) => mongoose.connect(uri)
+trackerSchema.statics.start = function (uri) {
+    return mongoose.connect(uri, console.log);
+};
 
 trackerSchema.statics.express = function (options) {
-    this.start(options.uri)
-    return (req, res, next) => {
-        if (mongoose.connection.readyState !== 1) return next()
-        const fullUrl = `${req.protocol}://${req.get('host')}${req.originalUrl}`
-        const appId = (res.locals.info && res.locals.info.appId) || null
+    this.start(options.uri);
+    var _this = this;
+    return function (req, res, next) {
+        if (mongoose.connection.readyState !== 1) return next();
+        var fullUrl = req.protocol + '://' + req.get('host') + req.originalUrl;
+        var appId = (res.locals.info && res.locals.info.appId) || null;
 
         if (options.appIds && options.appIds instanceof Array && options.appIds.indexOf(appId) !== -1) {
-            req.tracker = new this()
-            req.tracker.start(appId, fullUrl, req.method, req.body)
+            req.tracker = new _this();
+            req.tracker.start(appId, fullUrl, req.method, req.body);
             /* eslint-disable */
-            res.locals.tracker = req.tracker._id
+            res.locals.tracker = req.tracker._id;
             /* eslint-ensable */
-            onFinished(res, (err, response) => {
-                req.tracker.end(response.statusCode)
-            })
-            next()
+            onFinished(res, function (err, response) {
+                req.tracker.end(response.statusCode);
+            });
+            next();
         } else {
-            next()
+            next();
         }
     }
-}
+};
 
-const Request = mongoose.model('Request', requestSchema)
+var Request = mongoose.model('Request', requestSchema);
 
-const Tracker = mongoose.model('Tracker', trackerSchema)
+var Tracker = mongoose.model('Tracker', trackerSchema);
 
-Tracker.Request = Request
+Tracker.Request = Request;
 
-module.exports = Tracker
+module.exports = Tracker;
